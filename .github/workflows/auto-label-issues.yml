@@ -1,0 +1,45 @@
+name: Auto Label Issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+    - name: Check if issue contains keywords and apply labels
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const issue = context.payload.issue;
+          const title = issue.title.toLowerCase();
+          const body = issue.body ? issue.body.toLowerCase() : '';
+          
+          const labelsToAdd = [];
+          
+          // Check for bug keywords
+          if (title.includes('error') || body.includes('error')) {
+            labelsToAdd.push('bug');
+          }
+          
+          // Check for feature keywords
+          if (title.includes('add') || body.includes('add')) {
+            labelsToAdd.push('feature');
+          }
+          
+          // Add labels if any were found
+          if (labelsToAdd.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labelsToAdd
+            });
+            console.log(`Added labels: ${labelsToAdd.join(', ')} to issue #${issue.number}`);
+          } else {
+            console.log('No matching keywords found for automatic labeling');
+          }
